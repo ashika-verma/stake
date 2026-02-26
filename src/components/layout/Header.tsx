@@ -14,6 +14,9 @@ export function Header({ displayName }: HeaderProps) {
           Stake
         </Link>
         <div className="flex items-center gap-3">
+          <Link href="/my-bets" className="hidden md:block text-sm text-muted-foreground hover:text-foreground transition-colors">
+            My bets
+          </Link>
           {displayName && (
             <span className="text-sm text-muted-foreground hidden sm:block">{displayName}</span>
           )}

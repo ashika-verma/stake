@@ -7,7 +7,8 @@ function round2(n: number): number {
 
 /**
  * Calculate net balances after a bet resolves.
- * Winners receive proportional share of the total losing pool.
+ * Supports hedging: a user may have both a yes and a no participation.
+ * Net = sum of winning shares earned - sum of losing pledges paid.
  */
 export function calculateBalances(
   participations: Array<{
@@ -25,49 +26,52 @@ export function calculateBalances(
   const totalWinningPledges = round2(winners.reduce((s, p) => s + p.pledgeAmount, 0))
   const totalLosingPool = round2(losers.reduce((s, p) => s + p.pledgeAmount, 0))
 
-  return participations.map(p => {
-    if (p.prediction === outcome) {
-      // Winner: gets back pledge + proportional share of losing pool
-      const share = totalWinningPledges > 0
-        ? round2((p.pledgeAmount / totalWinningPledges) * totalLosingPool)
-        : 0
-      return {
-        userId: p.userId,
-        displayName: p.displayName,
-        venmoUsername: p.venmoUsername,
-        net: round2(share), // positive = owed money (from losers)
-      }
-    } else {
-      // Loser: owes their pledge
-      return {
-        userId: p.userId,
-        displayName: p.displayName,
-        venmoUsername: p.venmoUsername,
-        net: round2(-p.pledgeAmount), // negative = owes money
-      }
+  // Aggregate per user — a hedger appears on both sides
+  const byUser = new Map<string, { displayName: string; venmoUsername: string | null; net: number }>()
+
+  const ensureUser = (p: typeof participations[0]) => {
+    if (!byUser.has(p.userId)) {
+      byUser.set(p.userId, { displayName: p.displayName, venmoUsername: p.venmoUsername, net: 0 })
     }
-  })
+    return byUser.get(p.userId)!
+  }
+
+  for (const p of winners) {
+    const user = ensureUser(p)
+    const share = totalWinningPledges > 0
+      ? round2((p.pledgeAmount / totalWinningPledges) * totalLosingPool)
+      : 0
+    user.net = round2(user.net + share) // positive: owed money
+  }
+
+  for (const p of losers) {
+    const user = ensureUser(p)
+    user.net = round2(user.net - p.pledgeAmount) // negative: owes money
+  }
+
+  return Array.from(byUser.entries()).map(([userId, u]) => ({
+    userId,
+    displayName: u.displayName,
+    venmoUsername: u.venmoUsername,
+    net: u.net,
+  }))
 }
 
 /**
  * Greedy two-pointer debt simplification.
- * Produces the minimal set of transactions to settle all debts.
  */
 export function simplifyDebts(balances: PersonBalance[], betTitle: string): DebtTransaction[] {
   const DUST = 0.005
 
-  // Filter out dust amounts
-  const filtered = balances.filter(b => Math.abs(b.net) >= DUST)
-
-  const creditors = filtered
-    .filter(b => b.net > 0)
+  const creditors = balances
+    .filter(b => b.net > DUST)
     .map(b => ({ ...b }))
-    .sort((a, b) => b.net - a.net) // largest creditor first
+    .sort((a, b) => b.net - a.net)
 
-  const debtors = filtered
-    .filter(b => b.net < 0)
+  const debtors = balances
+    .filter(b => b.net < -DUST)
     .map(b => ({ ...b }))
-    .sort((a, b) => a.net - b.net) // largest debtor first (most negative)
+    .sort((a, b) => a.net - b.net)
 
   const transactions: DebtTransaction[] = []
   let ci = 0
@@ -76,7 +80,6 @@ export function simplifyDebts(balances: PersonBalance[], betTitle: string): Debt
   while (ci < creditors.length && di < debtors.length) {
     const creditor = creditors[ci]
     const debtor = debtors[di]
-
     const amount = round2(Math.min(creditor.net, -debtor.net))
 
     if (amount >= DUST) {
@@ -101,9 +104,6 @@ export function simplifyDebts(balances: PersonBalance[], betTitle: string): Debt
   return transactions
 }
 
-/**
- * Full settlement calculation for a resolved bet.
- */
 export function calculateSettlement(
   betId: string,
   betTitle: string,
@@ -125,30 +125,13 @@ export function calculateSettlement(
   const balances = calculateBalances(participations, outcome)
   const transactions = simplifyDebts(balances, betTitle)
 
-  return {
-    betId,
-    betTitle,
-    outcome,
-    totalPool,
-    winningPool,
-    losingPool,
-    balances,
-    transactions,
-  }
+  return { betId, betTitle, outcome, totalPool, winningPool, losingPool, balances, transactions }
 }
 
-/**
- * Settlement for a cancelled bet (tie or no outcome) — no money changes hands.
- */
 export function createCancelledSettlement(betId: string, betTitle: string): BetSettlement {
   return {
-    betId,
-    betTitle,
-    outcome: null,
-    totalPool: 0,
-    winningPool: 0,
-    losingPool: 0,
-    balances: [],
-    transactions: [],
+    betId, betTitle, outcome: null,
+    totalPool: 0, winningPool: 0, losingPool: 0,
+    balances: [], transactions: [],
   }
 }

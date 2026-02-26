@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navItems = [
-  { href: '/dashboard', label: 'Home', icon: '⌂' },
-  { href: '/groups/new', label: 'Group', icon: '+' },
+  { href: '/dashboard',  label: 'Home',     icon: '⌂' },
+  { href: '/my-bets',    label: 'My Bets',  icon: '🎯' },
+  { href: '/groups/new', label: 'New Group', icon: '+' },
 ]
 
 export function MobileNav() {

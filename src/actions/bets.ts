@@ -11,17 +11,12 @@ export async function createBet(input: CreateBetInput) {
 
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: bet, error } = await supabase
-    .from('bets')
-    .insert({
-      group_id: input.groupId,
-      title: input.title.trim(),
-      description: input.description?.trim() ?? null,
-      resolution_date: input.resolutionDate,
-      created_by: user.id,
-    })
-    .select()
-    .single()
+  const { data: bet, error } = await supabase.rpc('create_bet', {
+    p_group_id: input.groupId,
+    p_title: input.title.trim(),
+    p_description: input.description?.trim() ?? null,
+    p_resolution_date: input.resolutionDate,
+  })
 
   if (error) return { error: error.message }
 
@@ -36,32 +31,27 @@ export async function placeBet(input: PlaceBetInput) {
 
   if (!user) return { error: 'Not authenticated' }
 
-  // Verify bet is still open
+  // Get group_id for revalidation
   const { data: bet } = await supabase
     .from('bets')
-    .select('id, group_id, status')
+    .select('group_id')
     .eq('id', input.betId)
     .single()
 
-  if (!bet) return { error: 'Bet not found' }
-  if (bet.status !== 'open') return { error: 'This bet is no longer open' }
-
-  const { error } = await supabase
-    .from('bet_participations')
-    .insert({
-      bet_id: input.betId,
-      user_id: user.id,
-      prediction: input.prediction,
-      pledge_amount: input.pledgeAmount,
-    })
+  const { error } = await supabase.rpc('place_bet', {
+    p_bet_id: input.betId,
+    p_prediction: input.prediction,
+    p_pledge_amount: input.pledgeAmount,
+  })
 
   if (error) {
-    if (error.code === '23505') return { error: 'You have already placed a bet' }
+    if (error.message.includes('already')) return { error: 'You have already placed a bet' }
+    if (error.message.includes('not open')) return { error: 'This bet is no longer open' }
     return { error: error.message }
   }
 
   revalidatePath(`/bets/${input.betId}`)
-  revalidatePath(`/groups/${bet.group_id}`)
+  if (bet?.group_id) revalidatePath(`/groups/${bet.group_id}`)
   revalidatePath('/dashboard')
   return { success: true }
 }
@@ -72,22 +62,17 @@ export async function triggerVotingPeriod(betId: string) {
 
   if (!user) return { error: 'Not authenticated' }
 
-  // Atomically update only if status is still 'open'
-  const today = new Date().toISOString().split('T')[0]
-
-  const { data: bet, error } = await supabase
+  const { data: bet } = await supabase
     .from('bets')
-    .update({ status: 'voting', voting_opened_at: new Date().toISOString() })
+    .select('group_id')
     .eq('id', betId)
-    .eq('status', 'open') // atomic guard against double-trigger
-    .lte('resolution_date', today)
-    .select()
     .single()
 
+  const { error } = await supabase.rpc('open_voting', { p_bet_id: betId })
+
   if (error) return { error: error.message }
-  if (!bet) return { error: 'Could not open voting period' }
 
   revalidatePath(`/bets/${betId}`)
-  revalidatePath(`/groups/${bet.group_id}`)
+  if (bet?.group_id) revalidatePath(`/groups/${bet.group_id}`)
   return { success: true }
 }

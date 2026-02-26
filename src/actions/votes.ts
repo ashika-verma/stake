@@ -11,61 +11,55 @@ export async function castVote(input: CastVoteInput) {
 
   if (!user) return { error: 'Not authenticated' }
 
-  // Insert vote
-  const { error: voteError } = await supabase
-    .from('resolution_votes')
-    .insert({ bet_id: input.betId, user_id: user.id, vote: input.vote })
+  const { error: voteError } = await supabase.rpc('cast_vote', {
+    p_bet_id: input.betId,
+    p_vote: input.vote,
+  })
 
   if (voteError) {
-    if (voteError.code === '23505') return { error: 'You have already voted' }
+    if (voteError.message.includes('already')) return { error: 'You have already voted' }
     return { error: voteError.message }
   }
 
-  // Check if we should resolve
-  const result = await resolveIfReady(input.betId)
-  return result
+  // Check if bet should resolve
+  return resolveIfReady(input.betId)
 }
 
 export async function resolveIfReady(betId: string) {
   const supabase = await createClient()
 
-  // Fetch bet + participations + votes
   const { data: bet } = await supabase
     .from('bets')
     .select('id, group_id, status, voting_opened_at')
     .eq('id', betId)
     .single()
 
-  if (!bet || bet.status !== 'voting') return { success: true }
+  if (!bet || bet.status !== 'voting') {
+    revalidatePath(`/bets/${betId}`)
+    return { success: true }
+  }
 
   const [{ data: participations }, { data: votes }] = await Promise.all([
     supabase.from('bet_participations').select('user_id').eq('bet_id', betId),
     supabase.from('resolution_votes').select('vote').eq('bet_id', betId),
   ])
 
-  const totalParticipants = participations?.length ?? 0
-  const allVotes = votes ?? []
-
-  const result = checkVoteResolution(allVotes, totalParticipants, bet.voting_opened_at!)
+  const result = checkVoteResolution(
+    votes ?? [],
+    participations?.length ?? 0,
+    bet.voting_opened_at!
+  )
 
   if (!result.shouldResolve) {
     revalidatePath(`/bets/${betId}`)
     return { success: true }
   }
 
-  if (result.cancelled) {
-    await supabase
-      .from('bets')
-      .update({ status: 'cancelled', outcome: null })
-      .eq('id', betId)
-      .eq('status', 'voting')
-  } else {
-    await supabase
-      .from('bets')
-      .update({ status: 'resolved', outcome: result.outcome })
-      .eq('id', betId)
-      .eq('status', 'voting')
-  }
+  await supabase.rpc('resolve_bet', {
+    p_bet_id: betId,
+    p_outcome: result.outcome ?? null,
+    p_cancelled: result.cancelled,
+  })
 
   revalidatePath(`/bets/${betId}`)
   revalidatePath(`/groups/${bet.group_id}`)

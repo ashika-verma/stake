@@ -20,24 +20,15 @@ export async function createGroup(formData: FormData) {
       .from('groups')
       .select('id')
       .eq('invite_code', code)
-      .single()
+      .maybeSingle()
     return !!data
   })
 
-  const { data: group, error: groupError } = await supabase
-    .from('groups')
-    .insert({ name: name.trim(), invite_code: inviteCode, created_by: user.id })
-    .select()
-    .single()
+  // Use security definer RPC to bypass RLS evaluation timing issue
+  const { data: group, error } = await supabase
+    .rpc('create_group', { p_name: name.trim(), p_invite_code: inviteCode })
 
-  if (groupError) return { error: groupError.message }
-
-  // Auto-add creator as member
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .insert({ group_id: group.id, user_id: user.id })
-
-  if (memberError) return { error: memberError.message }
+  if (error) return { error: error.message }
 
   revalidatePath('/dashboard')
   redirect(`/groups/${group.id}`)
@@ -49,31 +40,13 @@ export async function joinGroup(inviteCode: string) {
 
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: group, error: groupError } = await supabase
-    .from('groups')
-    .select('id, name')
-    .eq('invite_code', inviteCode.toUpperCase().trim())
-    .single()
+  const { data: group, error } = await supabase
+    .rpc('join_group', { p_invite_code: inviteCode })
 
-  if (groupError || !group) return { error: 'Invalid invite code' }
-
-  // Check if already a member
-  const { data: existing } = await supabase
-    .from('group_members')
-    .select('id')
-    .eq('group_id', group.id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (existing) {
-    redirect(`/groups/${group.id}`)
+  if (error) {
+    if (error.message.includes('Invalid invite code')) return { error: 'Invalid invite code' }
+    return { error: error.message }
   }
-
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .insert({ group_id: group.id, user_id: user.id })
-
-  if (memberError) return { error: memberError.message }
 
   revalidatePath('/dashboard')
   revalidatePath(`/groups/${group.id}`)
