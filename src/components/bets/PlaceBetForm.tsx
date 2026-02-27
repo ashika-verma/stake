@@ -5,11 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { placeBet } from '@/actions/bets'
+import { VenmoGate } from '@/components/profile/VenmoGate'
 import type { Prediction } from '@/types/database'
 
 interface PlaceBetFormProps {
   betId: string
   myParticipations: Array<{ prediction: Prediction; pledge_amount: number }>
+  venmoUsername: string | null
+  displayName: string
 }
 
 function PositionSummary({ participations }: { participations: Array<{ prediction: Prediction; pledge_amount: number }> }) {
@@ -34,11 +37,20 @@ function PositionSummary({ participations }: { participations: Array<{ predictio
   )
 }
 
-export function PlaceBetForm({ betId, myParticipations }: PlaceBetFormProps) {
+export function PlaceBetForm({ betId, myParticipations, venmoUsername, displayName }: PlaceBetFormProps) {
   const [prediction, setPrediction] = useState<Prediction | null>(null)
   const [error, setError]   = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [localParticipations, setLocalParticipations] = useState(myParticipations)
+
+  if (!venmoUsername) {
+    return (
+      <VenmoGate
+        displayName={displayName}
+        message="You need a Venmo username to place bets. Winnings and debts are settled via Venmo."
+      />
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

@@ -40,6 +40,17 @@ export async function joinGroup(inviteCode: string) {
 
   if (!user) return { error: 'Not authenticated' }
 
+  // Require Venmo username before joining a group
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('venmo_username')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.venmo_username) {
+    return { error: 'Add your Venmo username in your profile before joining a group' }
+  }
+
   const { data: group, error } = await supabase
     .rpc('join_group', { p_invite_code: inviteCode })
 

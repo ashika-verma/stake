@@ -7,6 +7,7 @@ const navItems = [
   { href: '/dashboard',  label: 'Home',     icon: '⌂' },
   { href: '/my-bets',    label: 'My Bets',  icon: '🎯' },
   { href: '/groups/new', label: 'New Group', icon: '+' },
+  { href: '/profile',    label: 'Profile',  icon: '◉' },
 ]
 
 export function MobileNav() {
