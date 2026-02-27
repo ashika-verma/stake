@@ -59,7 +59,6 @@ export function MarketChart({ participations }: MarketChartProps) {
     const pts = series.map((p, i) => ({ x: xScale(p.time), y: yScale(getValue(p)), i }))
     return pts.reduce((acc, pt, i) => {
       if (i === 0) return `M ${pt.x} ${pt.y}`
-      const prev = pts[i - 1]
       return `${acc} H ${pt.x} V ${pt.y}` // horizontal then vertical = step
     }, '')
   }

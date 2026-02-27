@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { buildVenmoLink, buildVenmoWebLink } from '@/lib/venmo'
 
@@ -11,12 +11,9 @@ interface VenmoButtonProps {
 }
 
 export function VenmoButton({ username, amount, note }: VenmoButtonProps) {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const ua = navigator.userAgent
-    setIsMobile(/iPhone|iPad|iPod|Android/i.test(ua))
-  }, [])
+  const [isMobile] = useState(() =>
+    typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  )
 
   const deepLink = buildVenmoLink({ username, amount, note })
   const webLink = buildVenmoWebLink({ username, amount, note })

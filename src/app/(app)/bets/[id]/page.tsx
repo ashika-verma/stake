@@ -17,7 +17,7 @@ import { SettlementCard } from '@/components/settlement/SettlementCard'
 import { DebtList } from '@/components/settlement/DebtList'
 import { calculateSettlement, createCancelledSettlement } from '@/lib/settlement'
 import type { ParticipationWithProfile } from '@/types/app'
-import type { Prediction } from '@/types/database'
+
 
 interface Props {
   params: Promise<{ id: string }>
@@ -76,7 +76,6 @@ export default async function BetDetailPage({ params }: Props) {
 
   // Current user's participations (may be 0, 1, or 2 with hedging)
   const myParticipations = participations.filter(p => p.user_id === user.id)
-  const mySides = myParticipations.map(p => p.prediction as Prediction)
   const currentUserVote = votes.find((v: { user_id: string }) => v.user_id === user.id) ?? null
 
   // Unique participants for quorum calculation

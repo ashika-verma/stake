@@ -121,7 +121,7 @@ export default async function GroupPage({ params }: Props) {
         </Link>
       </div>
 
-      <InviteCodeDisplay inviteCode={group.invite_code} groupId={group.id} />
+      <InviteCodeDisplay inviteCode={group.invite_code} />
 
       <Separator />
 

@@ -7,10 +7,9 @@ import { Label } from '@/components/ui/label'
 
 interface InviteCodeDisplayProps {
   inviteCode: string
-  groupId: string
 }
 
-export function InviteCodeDisplay({ inviteCode, groupId }: InviteCodeDisplayProps) {
+export function InviteCodeDisplay({ inviteCode }: InviteCodeDisplayProps) {
   const [copied, setCopied] = useState(false)
 
   const joinUrl = typeof window !== 'undefined'
