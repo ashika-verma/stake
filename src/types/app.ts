@@ -48,6 +48,7 @@ export interface DebtTransaction {
   toVenmoUsername: string | null
   amount: number
   betTitle: string
+  betId: string
 }
 
 export interface BetSettlement {

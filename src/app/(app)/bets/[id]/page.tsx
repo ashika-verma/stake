@@ -90,6 +90,8 @@ export default async function BetDetailPage({ params }: Props) {
   const canStillBet = isOpen && !isPastDue
 
   let settlement = null
+  let paidKeys = new Set<string>()
+
   if (isResolved || isCancelled) {
     if (isCancelled || !bet.outcome) {
       settlement = createCancelledSettlement(bet.id, bet.title)
@@ -104,6 +106,16 @@ export default async function BetDetailPage({ params }: Props) {
           pledgeAmount: p.pledge_amount,
         })),
         bet.outcome
+      )
+
+      // Fetch which debts have been marked paid
+      const { data: payments } = await supabase
+        .from('debt_payments')
+        .select('from_user_id, to_user_id')
+        .eq('bet_id', id)
+
+      paidKeys = new Set(
+        (payments ?? []).map(p => `${id}:${p.from_user_id}:${p.to_user_id}`)
       )
     }
   }
@@ -249,7 +261,7 @@ export default async function BetDetailPage({ params }: Props) {
           <SettlementCard settlement={settlement} currentUserId={user.id} />
           <div>
             <h3 className="font-semibold mb-3">Who pays whom</h3>
-            <DebtList transactions={settlement.transactions} currentUserId={user.id} />
+            <DebtList transactions={settlement.transactions} currentUserId={user.id} paidKeys={paidKeys} />
           </div>
         </>
       )}

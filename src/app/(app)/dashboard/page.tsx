@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { GroupCard } from '@/components/groups/GroupCard'
 import { BetList } from '@/components/bets/BetList'
+import { JoinByCodeForm } from '@/components/groups/JoinByCodeForm'
 import { Separator } from '@/components/ui/separator'
 import type { Group } from '@/types/database'
 
@@ -64,11 +65,25 @@ export default async function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 border border-dashed rounded-lg">
-            <p className="text-muted-foreground mb-4">You&apos;re not in any groups yet</p>
-            <div className="flex gap-3 justify-center">
+          <div className="space-y-6 py-12 border border-dashed rounded-lg px-6 text-center">
+            <div className="space-y-1">
+              <p className="font-medium">Welcome to Stake</p>
+              <p className="text-sm text-muted-foreground">
+                Bet on anything with friends and settle up via Venmo.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Have an invite code?</p>
+                <JoinByCodeForm />
+              </div>
+              <div className="flex items-center gap-3 max-w-xs mx-auto">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <Separator className="flex-1" />
+              </div>
               <Link href="/groups/new">
-                <Button>Create a group</Button>
+                <Button variant="outline" className="w-full max-w-xs">Create a group</Button>
               </Link>
             </div>
           </div>

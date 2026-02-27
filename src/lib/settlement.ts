@@ -60,7 +60,7 @@ export function calculateBalances(
 /**
  * Greedy two-pointer debt simplification.
  */
-export function simplifyDebts(balances: PersonBalance[], betTitle: string): DebtTransaction[] {
+export function simplifyDebts(balances: PersonBalance[], betTitle: string, betId: string): DebtTransaction[] {
   const DUST = 0.005
 
   const creditors = balances
@@ -91,6 +91,7 @@ export function simplifyDebts(balances: PersonBalance[], betTitle: string): Debt
         toVenmoUsername: creditor.venmoUsername,
         amount,
         betTitle,
+        betId,
       })
     }
 
@@ -123,7 +124,7 @@ export function calculateSettlement(
   const losingPool = round2(totalPool - winningPool)
 
   const balances = calculateBalances(participations, outcome)
-  const transactions = simplifyDebts(balances, betTitle)
+  const transactions = simplifyDebts(balances, betTitle, betId)
 
   return { betId, betTitle, outcome, totalPool, winningPool, losingPool, balances, transactions }
 }

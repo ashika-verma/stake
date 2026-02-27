@@ -68,7 +68,7 @@ describe("simplifyDebts", () => {
       { userId: "B", displayName: "B", venmoUsername: null, net: -5 },
       { userId: "C", displayName: "C", venmoUsername: null, net: -5 },
     ];
-    const txns = simplifyDebts(balances, "Test Bet");
+    const txns = simplifyDebts(balances, "Test Bet", "bet-x");
 
     expect(txns).toHaveLength(2);
     expect(txns.reduce((s, t) => s + t.amount, 0)).toBeCloseTo(10);
@@ -80,7 +80,7 @@ describe("simplifyDebts", () => {
       { userId: "A", displayName: "A", venmoUsername: null, net: 0.001 },
       { userId: "B", displayName: "B", venmoUsername: null, net: -0.001 },
     ];
-    expect(simplifyDebts(balances, "Dust")).toHaveLength(0);
+    expect(simplifyDebts(balances, "Dust", "bet-x")).toHaveLength(0);
   });
 
   it("returns empty array when all balances are zero", () => {
@@ -88,7 +88,7 @@ describe("simplifyDebts", () => {
       { userId: "A", displayName: "A", venmoUsername: null, net: 0 },
       { userId: "B", displayName: "B", venmoUsername: null, net: 0 },
     ];
-    expect(simplifyDebts(balances, "Zero")).toHaveLength(0);
+    expect(simplifyDebts(balances, "Zero", "bet-x")).toHaveLength(0);
   });
 });
 
