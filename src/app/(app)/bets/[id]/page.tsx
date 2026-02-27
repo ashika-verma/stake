@@ -30,17 +30,24 @@ export default async function BetDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { data: bet } = await supabase
-    .from('bets')
-    .select(`
-      *,
-      groups(*),
-      profiles!bets_created_by_fkey(*),
-      bet_participations(*, profiles(*)),
-      resolution_votes(*)
-    `)
-    .eq('id', id)
-    .single()
+  const [{ data: bet }, { data: currentUserProfile }] = await Promise.all([
+    supabase
+      .from('bets')
+      .select(`
+        *,
+        groups(*),
+        profiles!bets_created_by_fkey(*),
+        bet_participations(*, profiles(*)),
+        resolution_votes(*)
+      `)
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('profiles')
+      .select('display_name, venmo_username')
+      .eq('id', user.id)
+      .single(),
+  ])
 
   if (!bet) notFound()
 
@@ -184,6 +191,8 @@ export default async function BetDetailPage({ params }: Props) {
                 prediction: p.prediction,
                 pledge_amount: p.pledge_amount,
               }))}
+              venmoUsername={currentUserProfile?.venmo_username ?? null}
+              displayName={currentUserProfile?.display_name ?? ''}
             />
           </CardContent>
         </Card>

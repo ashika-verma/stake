@@ -31,6 +31,17 @@ export async function placeBet(input: PlaceBetInput) {
 
   if (!user) return { error: 'Not authenticated' }
 
+  // Require Venmo username before betting
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('venmo_username')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.venmo_username) {
+    return { error: 'Add your Venmo username in your profile before placing a bet' }
+  }
+
   // Get group_id for revalidation
   const { data: bet } = await supabase
     .from('bets')

@@ -18,7 +18,9 @@ export function Header({ displayName }: HeaderProps) {
             My bets
           </Link>
           {displayName && (
-            <span className="text-sm text-muted-foreground hidden sm:block">{displayName}</span>
+            <Link href="/profile" className="text-sm text-muted-foreground hidden sm:block hover:text-foreground transition-colors">
+              {displayName}
+            </Link>
           )}
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">

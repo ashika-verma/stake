@@ -65,16 +65,21 @@ export async function updateProfile(input: UpdateProfileInput) {
 
   if (!user) return { error: 'Not authenticated' }
 
+  // Normalize venmo_username: strip leading @ and trim whitespace
+  const rawVenmo = input.venmoUsername?.trim() ?? null
+  const venmoUsername = rawVenmo?.startsWith('@') ? rawVenmo.slice(1) : rawVenmo || null
+
   const { error } = await supabase
     .from('profiles')
     .update({
       display_name: input.displayName,
-      venmo_username: input.venmoUsername ?? null,
+      venmo_username: venmoUsername,
     })
     .eq('id', user.id)
 
   if (error) return { error: error.message }
 
   revalidatePath('/dashboard')
+  revalidatePath('/profile')
   return { success: true }
 }
