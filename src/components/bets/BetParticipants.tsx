@@ -19,7 +19,7 @@ export function BetParticipants({ participations, currentUserId, showAmounts }: 
       <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${colorClass}`}>{label}</p>
       <div className="space-y-1">
         {group.map(p => (
-          <div key={p.user_id} className="flex justify-between items-center text-sm py-1">
+          <div key={p.id} className="flex justify-between items-center text-sm py-1">
             <span>
               {p.profile.display_name}
               {p.user_id === currentUserId && (

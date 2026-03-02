@@ -44,9 +44,10 @@ export async function resolveIfReady(betId: string) {
     supabase.from('resolution_votes').select('vote').eq('bet_id', betId),
   ])
 
+  const uniqueParticipants = new Set((participations ?? []).map(p => p.user_id)).size
   const result = checkVoteResolution(
     votes ?? [],
-    participations?.length ?? 0,
+    uniqueParticipants,
     bet.voting_opened_at!
   )
 
