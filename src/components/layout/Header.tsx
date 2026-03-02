@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export function Header({ displayName }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 border-b bg-background will-change-transform">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/dashboard" className="font-bold text-lg tracking-tight">
           Stake
