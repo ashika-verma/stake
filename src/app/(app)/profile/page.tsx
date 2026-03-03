@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ProfileForm } from '@/components/profile/ProfileForm'
 import { Badge } from '@/components/ui/badge'
+
+const BUG_REPORT_URL = 'https://github.com/ashika-verma/stake/issues/new?labels=bug&template=&title=Bug%3A+&body=%23%23+What+happened%0A%0A%23%23+Steps+to+reproduce%0A1.+%0A2.+%0A%0A%23%23+Expected+behavior%0A%0A%23%23+Actual+behavior%0A'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -40,6 +43,17 @@ export default async function ProfilePage() {
         displayName={profile.display_name}
         venmoUsername={profile.venmo_username}
       />
+
+      <div className="pt-4 border-t">
+        <Link
+          href={BUG_REPORT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Report a bug
+        </Link>
+      </div>
     </main>
   )
 }
