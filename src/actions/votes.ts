@@ -17,8 +17,9 @@ export async function castVote(input: CastVoteInput) {
   })
 
   if (voteError) {
-    if (voteError.message.includes('already')) return { error: 'You have already voted' }
-    return { error: voteError.message }
+    if (voteError.message.includes('resolution_votes_bet_id_user_id_key') || voteError.message.includes('already'))
+      return { error: "You've already voted on this bet." }
+    return { error: 'Something went wrong. Please try again.' }
   }
 
   // Check if bet should resolve

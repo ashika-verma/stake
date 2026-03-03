@@ -56,9 +56,10 @@ export async function placeBet(input: PlaceBetInput) {
   })
 
   if (error) {
-    if (error.message.includes('already')) return { error: 'You have already placed a bet' }
-    if (error.message.includes('not open')) return { error: 'This bet is no longer open' }
-    return { error: error.message }
+    if (error.message.includes('bet_participations_bet_id_user_id_prediction_key') || error.message.includes('already'))
+      return { error: "You've already placed a bet on this side." }
+    if (error.message.includes('not open')) return { error: 'This bet is no longer open.' }
+    return { error: 'Something went wrong. Please try again.' }
   }
 
   revalidatePath(`/bets/${input.betId}`)
