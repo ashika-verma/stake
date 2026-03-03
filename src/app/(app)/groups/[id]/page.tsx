@@ -75,11 +75,13 @@ export default async function GroupPage({ params }: Props) {
         {bets && bets.length > 0 ? (
           <BetList bets={bets} currentUserId={user.id} />
         ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg font-medium mb-1">No bets yet</p>
-            <p className="text-sm mb-4">Be the first to create a bet for this group</p>
+          <div className="rounded-lg border border-dashed p-8 text-center space-y-4">
+            <div>
+              <p className="font-medium">No bets yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Be the first to post one.</p>
+            </div>
             <Link href={`/groups/${id}/bets/new`}>
-              <Button variant="outline">Create first bet</Button>
+              <Button>New bet</Button>
             </Link>
           </div>
         )}

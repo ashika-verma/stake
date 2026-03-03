@@ -64,11 +64,17 @@ export default async function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 border border-dashed rounded-lg">
-            <p className="text-muted-foreground mb-4">You&apos;re not in any groups yet</p>
-            <div className="flex gap-3 justify-center">
+          <div className="rounded-lg border border-dashed p-8 text-center space-y-4">
+            <div>
+              <p className="font-medium">You&apos;re not in any groups yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Create a group or join one with an invite link.</p>
+            </div>
+            <div className="flex gap-3 justify-center flex-wrap">
               <Link href="/groups/new">
                 <Button>Create a group</Button>
+              </Link>
+              <Link href="/join">
+                <Button variant="outline">Join with invite code</Button>
               </Link>
             </div>
           </div>
