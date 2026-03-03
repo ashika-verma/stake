@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -57,6 +58,45 @@ export default async function LandingPage() {
               <p className="text-sm text-muted-foreground">{f.description}</p>
             </div>
           ))}
+        </div>
+
+        {/* F4: Example bet */}
+        <div className="max-w-sm w-full text-left space-y-2">
+          <p className="text-sm text-muted-foreground text-center font-medium">How it looks</p>
+          <Card className="opacity-90">
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-base leading-snug">
+                  Will the Bears make the playoffs?
+                </CardTitle>
+                <span className="shrink-0 rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
+                  Open
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">Closes Mar 15</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex h-3 rounded-full overflow-hidden bg-secondary">
+                <div className="bg-green-500" style={{ width: '60%' }} />
+                <div className="bg-red-500" style={{ width: '40%' }} />
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-lg bg-green-500/10 p-2">
+                  <p className="font-semibold text-green-400">$45.00</p>
+                  <p className="text-muted-foreground">Bet on Yes</p>
+                </div>
+                <div className="rounded-lg bg-secondary p-2">
+                  <p className="font-semibold">$75.00</p>
+                  <p className="text-muted-foreground">Total · 4 bets</p>
+                </div>
+                <div className="rounded-lg bg-red-500/10 p-2">
+                  <p className="font-semibold text-red-400">$30.00</p>
+                  <p className="text-muted-foreground">Bet on No</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <p className="text-xs text-muted-foreground text-center">Example bet — yours will look like this.</p>
         </div>
       </div>
 

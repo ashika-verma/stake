@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -56,7 +57,6 @@ function PayoutPreview({
   const currentYesPool = round2(allParticipations.filter(p => p.prediction === 'yes').reduce((s, p) => s + Number(p.pledge_amount), 0))
   const currentNoPool  = round2(allParticipations.filter(p => p.prediction === 'no').reduce((s, p) => s + Number(p.pledge_amount), 0))
 
-  let estimatedWin: number
   const opposingPool = prediction === 'yes' ? currentNoPool : currentYesPool
   const samePool     = prediction === 'yes' ? currentYesPool : currentNoPool
   const newSamePool  = round2(samePool + pledgeAmount)
@@ -70,13 +70,14 @@ function PayoutPreview({
     )
   }
 
-  estimatedWin = round2((pledgeAmount / newSamePool) * opposingPool)
+  const estimatedWin = round2((pledgeAmount / newSamePool) * opposingPool)
   const totalReturn = round2(pledgeAmount + estimatedWin)
 
   return (
     <div className="rounded-lg bg-secondary/50 p-3 text-sm space-y-1">
-      <p className="text-green-600">✓ If right: win ~${estimatedWin.toFixed(2)} (get back ${totalReturn.toFixed(2)} total)</p>
+      <p className="text-green-600">✓ If right: win ~${estimatedWin.toFixed(2)} at current pool size (get back ${totalReturn.toFixed(2)} total)</p>
       <p className="text-red-500">✗ If wrong: lose ${pledgeAmount.toFixed(2)}</p>
+      <p className="text-xs text-muted-foreground">Actual payout depends on the final pool when the bet closes.</p>
     </div>
   )
 }
@@ -111,6 +112,7 @@ export function PlaceBetForm({ betId, myParticipations, allParticipations, venmo
     if (result && 'error' in result) {
       setError(result.error ?? 'Something went wrong')
     } else {
+      toast.success('Bet placed!')
       // Optimistically update local position
       setLocalParticipations(prev => [...prev, { prediction, pledge_amount: pledgeAmount }])
       setPrediction(null)
@@ -123,14 +125,14 @@ export function PlaceBetForm({ betId, myParticipations, allParticipations, venmo
     <div className="space-y-4">
       {localParticipations.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Your position</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Your bets</p>
           <PositionSummary participations={localParticipations} />
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label>Add to position</Label>
+          <Label>Place your bet</Label>
           <div className="grid grid-cols-2 gap-3">
             {(['yes', 'no'] as Prediction[]).map(side => (
               <button

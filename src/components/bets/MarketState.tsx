@@ -50,7 +50,7 @@ export function MarketState({ participations }: MarketStateProps) {
       <div className="grid grid-cols-3 gap-2 text-center text-sm">
         <div className="rounded-lg bg-green-500/10 p-2">
           <p className="font-semibold text-green-400">${yesPool.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Yes pool</p>
+          <p className="text-xs text-muted-foreground">Bet on Yes</p>
           {yesPayout && (
             <p className="text-xs text-green-400 font-medium">{yesPayout}x payout</p>
           )}
@@ -62,12 +62,15 @@ export function MarketState({ participations }: MarketStateProps) {
         </div>
         <div className="rounded-lg bg-red-500/10 p-2">
           <p className="font-semibold text-red-400">${noPool.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">No pool</p>
+          <p className="text-xs text-muted-foreground">Bet on No</p>
           {noPayout && (
             <p className="text-xs text-red-400 font-medium">{noPayout}x payout</p>
           )}
         </div>
       </div>
+      <p className="text-xs text-muted-foreground text-center">
+        Payouts shift as more bets come in — these are estimates based on the current pool.
+      </p>
     </div>
   )
 }

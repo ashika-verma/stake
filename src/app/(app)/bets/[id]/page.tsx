@@ -10,14 +10,15 @@ import { BetParticipants } from '@/components/bets/BetParticipants'
 import { MarketState } from '@/components/bets/MarketState'
 import { MarketChart } from '@/components/bets/MarketChart'
 import { CountdownTimer } from '@/components/bets/CountdownTimer'
+import { CancelBetButton } from '@/components/bets/CancelBetButton'
 import { TriggerVotingButton } from '@/components/voting/TriggerVotingButton'
 import { VotingPanel } from '@/components/voting/VotingPanel'
 import { VoteTally } from '@/components/voting/VoteTally'
+import { CreatorResolvePanel } from '@/components/voting/CreatorResolvePanel'
 import { SettlementCard } from '@/components/settlement/SettlementCard'
 import { DebtList } from '@/components/settlement/DebtList'
 import { calculateSettlement, createCancelledSettlement } from '@/lib/settlement'
 import type { ParticipationWithProfile } from '@/types/app'
-import type { Prediction } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -50,6 +51,37 @@ export default async function BetDetailPage({ params }: Props) {
   ])
 
   if (!bet) notFound()
+
+  // F1: Check if user is a member of this bet's group
+  const { data: membership } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', bet.group_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  // F1: Non-member sees a join prompt instead of 404
+  if (!membership) {
+    return (
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl leading-snug">{bet.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground text-sm">
+              This bet is in <strong>{bet.groups?.name}</strong>. Join the group to see details and place a bet.
+            </p>
+            <Link href={`/join/${bet.groups?.invite_code}`}>
+              <span className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors">
+                Join group
+              </span>
+            </Link>
+          </CardContent>
+        </Card>
+      </main>
+    )
+  }
 
   const today = new Date().toISOString().split('T')[0]
   if (bet.status === 'open' && bet.resolution_date <= today) {
@@ -85,6 +117,12 @@ export default async function BetDetailPage({ params }: Props) {
   const isCancelled = bet.status === 'cancelled'
   const isPastDue   = bet.resolution_date <= today
   const canStillBet = isOpen && !isPastDue
+  const isCreator   = bet.created_by === user.id
+
+  // C1: Compute 48-hour voting deadline
+  const votingDeadline = bet.voting_opened_at
+    ? new Date(new Date(bet.voting_opened_at).getTime() + 48 * 60 * 60 * 1000).toISOString()
+    : null
 
   let settlement = null
   if (isResolved || isCancelled) {
@@ -118,6 +156,9 @@ export default async function BetDetailPage({ params }: Props) {
     }
   }
 
+  // V3: Check if current user is a payee in any settlement transaction
+  const isPayee = settlement?.transactions.some(t => t.toUserId === user.id) ?? false
+
   return (
     <main className="max-w-2xl mx-auto p-4 space-y-6">
       {/* Breadcrumb */}
@@ -133,7 +174,10 @@ export default async function BetDetailPage({ params }: Props) {
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <CardTitle className="text-xl leading-snug">{bet.title}</CardTitle>
-            <BetStatusBadge status={bet.status} />
+            <div className="flex items-center gap-2 shrink-0">
+              {isOpen && isCreator && <CancelBetButton betId={id} />}
+              <BetStatusBadge status={bet.status} />
+            </div>
           </div>
           {bet.description && (
             <p className="text-muted-foreground text-sm mt-1">{bet.description}</p>
@@ -141,7 +185,7 @@ export default async function BetDetailPage({ params }: Props) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <div className="flex justify-between">
-            <span>Resolution date</span>
+            <span>Betting closes / votes open</span>
             <span className="text-foreground">
               {new Date(bet.resolution_date + 'T00:00:00').toLocaleDateString('en-US', {
                 month: 'long', day: 'numeric', year: 'numeric',
@@ -242,6 +286,11 @@ export default async function BetDetailPage({ params }: Props) {
             </CardContent>
           </Card>
 
+          {/* C1: Creator resolve panel */}
+          {isCreator && (
+            <CreatorResolvePanel betId={id} votingDeadline={votingDeadline} />
+          )}
+
           {myParticipations.length > 0 ? (
             <VotingPanel betId={id} hasVoted={!!currentUserVote} currentVote={currentUserVote?.vote} />
           ) : (
@@ -254,6 +303,22 @@ export default async function BetDetailPage({ params }: Props) {
             </Card>
           )}
         </>
+      )}
+
+      {/* V3: Payee confirmation banner */}
+      {isResolved && isPayee && currentUserProfile?.venmo_username && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-amber-400 font-medium">You&apos;re owed money</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Confirm your Venmo handle is correct so payments reach you.
+              Your current handle: <span className="font-mono font-medium text-foreground">@{currentUserProfile.venmo_username}</span>
+            </p>
+            <Link href="/profile" className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 mt-2 inline-block">
+              Edit in profile →
+            </Link>
+          </CardContent>
+        </Card>
       )}
 
       {/* Settlement */}

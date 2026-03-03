@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { castVote } from '@/actions/votes'
@@ -12,6 +13,7 @@ interface VotingPanelProps {
 }
 
 export function VotingPanel({ betId, hasVoted, currentVote }: VotingPanelProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [voted, setVoted] = useState(hasVoted)
@@ -27,6 +29,7 @@ export function VotingPanel({ betId, hasVoted, currentVote }: VotingPanelProps) 
     } else {
       setVoted(true)
       setMyVote(vote)
+      router.refresh()
     }
   }
 
@@ -60,6 +63,9 @@ export function VotingPanel({ betId, hasVoted, currentVote }: VotingPanelProps) 
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Did this happen? Vote based on what you observed.
+        </p>
+        <p className="text-xs text-amber-500/80">
+          Vote based on what actually happened — not what you bet on.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <button

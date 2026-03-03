@@ -99,7 +99,10 @@ export function MyBetCard({ data }: { data: MyBetCardData }) {
                   ? 'bg-green-500/20 text-green-400'
                   : 'bg-red-500/20 text-red-400'
               }`}>
-                {data.netPnl >= 0 ? '+' : ''}${data.netPnl.toFixed(2)}
+                {data.netPnl >= 0
+                  ? <>{`+$${data.netPnl.toFixed(2)}`} <span className="font-normal opacity-70">profit</span></>
+                  : <>{`-$${Math.abs(data.netPnl).toFixed(2)}`} <span className="font-normal opacity-70">owed</span></>
+                }
               </span>
             )}
             <BetStatusBadge status={data.betStatus} />

@@ -20,8 +20,11 @@ export function VenmoGate({ displayName, message = 'Add your Venmo username to c
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = venmoUsername.trim()
+    const trimmed = venmoUsername.trim().replace(/^@/, '')
     if (!trimmed) return setError('Enter your Venmo username')
+    if (!/^[a-zA-Z0-9_-]{1,30}$/.test(trimmed)) {
+      return setError('Venmo usernames are letters, numbers, _ and - only.')
+    }
     setError(null)
     setLoading(true)
     const result = await updateProfile({ displayName, venmoUsername: trimmed })

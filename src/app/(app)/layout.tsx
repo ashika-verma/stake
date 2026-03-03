@@ -1,7 +1,10 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Header } from '@/components/layout/Header'
 import { MobileNav } from '@/components/layout/MobileNav'
+
+const BUG_REPORT_URL = 'https://github.com/ashika-verma/stake/issues/new?labels=bug&template=&title=Bug%3A+&body=%23%23+What+happened%0A%0A%23%23+Steps+to+reproduce%0A1.+%0A2.+%0A%0A%23%23+Expected+behavior%0A%0A%23%23+Actual+behavior%0A'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -25,6 +28,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <MobileNav />
+      <div className="hidden md:block border-t py-2 text-center">
+        <Link
+          href={BUG_REPORT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Report a bug
+        </Link>
+      </div>
     </div>
   )
 }

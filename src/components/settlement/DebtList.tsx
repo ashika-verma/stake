@@ -2,8 +2,18 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { VenmoButton } from './VenmoButton'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { markAsPaid, unmarkAsPaid } from '@/actions/settlements'
+import { buildVenmoLink, buildVenmoWebLink } from '@/lib/venmo'
 import type { DebtTransaction } from '@/types/app'
 
 interface DebtListProps {
@@ -16,6 +26,7 @@ interface DebtListProps {
 export function DebtList({ betId, transactions, currentUserId, paidKeys: initialPaidKeys }: DebtListProps) {
   const [paidKeys, setPaidKeys] = useState<Set<string>>(initialPaidKeys)
   const [loadingKey, setLoadingKey] = useState<string | null>(null)
+  const [confirmPending, setConfirmPending] = useState<DebtTransaction | null>(null)
 
   if (transactions.length === 0) {
     return (
@@ -89,11 +100,13 @@ export function DebtList({ betId, transactions, currentUserId, paidKeys: initial
         {iOwe && (
           <div className="space-y-2">
             {!isPaid && t.toVenmoUsername && (
-              <VenmoButton
-                username={t.toVenmoUsername}
-                amount={t.amount}
-                note={`Stake bet: ${t.betTitle}`}
-              />
+              <Button
+                size="sm"
+                className="bg-[#3D95CE] hover:bg-[#2e7db5] text-white"
+                onClick={() => setConfirmPending(t)}
+              >
+                Pay via Venmo
+              </Button>
             )}
             {isPaid ? (
               <div className="flex items-center gap-3">
@@ -132,9 +145,72 @@ export function DebtList({ betId, transactions, currentUserId, paidKeys: initial
   }
 
   return (
-    <div className="space-y-3">
-      {myTransactions.map(t => renderTransaction(t, true))}
-      {otherTransactions.map(t => renderTransaction(t, false))}
-    </div>
+    <>
+      <div className="space-y-3">
+        {myTransactions.map(t => renderTransaction(t, true))}
+        {otherTransactions.map(t => renderTransaction(t, false))}
+      </div>
+
+      {/* V2: Pre-payment confirmation dialog */}
+      {confirmPending && (
+        <VenmoConfirmDialog
+          transaction={confirmPending}
+          onClose={() => setConfirmPending(null)}
+        />
+      )}
+    </>
+  )
+}
+
+function VenmoConfirmDialog({
+  transaction,
+  onClose,
+}: {
+  transaction: DebtTransaction
+  onClose: () => void
+}) {
+  const deepLink = buildVenmoLink({
+    username: transaction.toVenmoUsername!,
+    amount: transaction.amount,
+    note: `Stake bet: ${transaction.betTitle}`,
+  })
+  const webLink = buildVenmoWebLink({
+    username: transaction.toVenmoUsername!,
+    amount: transaction.amount,
+    note: `Stake bet: ${transaction.betTitle}`,
+  })
+
+  return (
+    <AlertDialog open onOpenChange={open => { if (!open) onClose() }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirm payment</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2 text-sm">
+              <p>
+                Paying <span className="font-mono font-medium text-foreground">@{transaction.toVenmoUsername}</span>{' '}
+                <span className="font-semibold text-foreground">${transaction.amount.toFixed(2)}</span>
+              </p>
+              <p>
+                Ask <strong>{transaction.toDisplayName}</strong> to confirm this is their correct Venmo handle before paying.
+              </p>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogAction asChild>
+            <a
+              href={typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? deepLink : webLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+            >
+              Open Venmo
+            </a>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

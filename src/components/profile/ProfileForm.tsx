@@ -13,7 +13,10 @@ import { updateProfile } from '@/actions/auth'
 
 const schema = z.object({
   displayName: z.string().min(1, 'Display name is required').max(50),
-  venmoUsername: z.string().max(30).optional(),
+  venmoUsername: z.string()
+    .transform(v => v.replace(/^@/, '').trim())
+    .refine(v => v === '' || /^[a-zA-Z0-9_-]{1,30}$/.test(v), 'Venmo usernames are letters, numbers, _ and - only.')
+    .optional(),
 })
 
 type FormValues = z.infer<typeof schema>

@@ -2,10 +2,11 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { InviteCodeDisplay } from '@/components/groups/InviteCodeDisplay'
 import { BetList } from '@/components/bets/BetList'
+import { GroupLeaderboard } from '@/components/groups/GroupLeaderboard'
+import { calculateBalances } from '@/lib/settlement'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -27,10 +28,10 @@ export default async function GroupPage({ params }: Props) {
 
   if (!group) notFound()
 
-  // Fetch bets for this group
+  // Fetch bets for this group (with participations + profiles for leaderboard)
   const { data: bets } = await supabase
     .from('bets')
-    .select('*, profiles!bets_created_by_fkey(*), bet_participations(*)')
+    .select('*, profiles!bets_created_by_fkey(*), bet_participations(*, profiles(*))')
     .eq('group_id', id)
     .order('created_at', { ascending: false })
 
@@ -39,6 +40,41 @@ export default async function GroupPage({ params }: Props) {
     user_id: string
     profiles: { id: string; display_name: string; venmo_username: string | null }
   }>
+
+  // F3: Compute leaderboard from resolved bets
+  const resolvedBets = (bets ?? []).filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (b: any) => b.status === 'resolved' && b.outcome
+  )
+
+  const netPnlByUser = new Map<string, { displayName: string; net: number }>()
+
+  for (const bet of resolvedBets) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const participations = ((bet.bet_participations ?? []) as any[]).map((p: any) => ({
+      userId: p.user_id as string,
+      displayName: (p.profiles?.display_name ?? 'Unknown') as string,
+      venmoUsername: (p.profiles?.venmo_username ?? null) as string | null,
+      prediction: p.prediction as 'yes' | 'no',
+      pledgeAmount: Number(p.pledge_amount),
+    }))
+
+    if (participations.length === 0) continue
+
+    const balances = calculateBalances(participations, bet.outcome)
+    for (const b of balances) {
+      const existing = netPnlByUser.get(b.userId)
+      if (existing) {
+        existing.net = Math.round((existing.net + b.net) * 100) / 100
+      } else {
+        netPnlByUser.set(b.userId, { displayName: b.displayName, net: b.net })
+      }
+    }
+  }
+
+  const leaderboardEntries = Array.from(netPnlByUser.entries())
+    .map(([userId, { displayName, net }]) => ({ userId, displayName, netPnl: net }))
+    .sort((a, b) => b.netPnl - a.netPnl)
 
   return (
     <main className="max-w-2xl mx-auto p-4 space-y-6">
@@ -67,6 +103,14 @@ export default async function GroupPage({ params }: Props) {
           ))}
         </div>
       </div>
+
+      {/* F3: Leaderboard — only shown if ≥1 resolved bet */}
+      {leaderboardEntries.length > 0 && (
+        <>
+          <Separator />
+          <GroupLeaderboard entries={leaderboardEntries} currentUserId={user.id} />
+        </>
+      )}
 
       <Separator />
 

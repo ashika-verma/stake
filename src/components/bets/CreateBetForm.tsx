@@ -13,6 +13,7 @@ interface CreateBetFormProps {
 export function CreateBetForm({ groupId }: CreateBetFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [titleLength, setTitleLength] = useState(0)
 
   // Min date is tomorrow
   const tomorrow = new Date()
@@ -43,11 +44,16 @@ export function CreateBetForm({ groupId }: CreateBetFormProps) {
         <Input
           id="title"
           name="title"
-          placeholder="Will X happen by the resolution date?"
+          placeholder="Will the Lakers win the championship? · Will it snow before March?"
           required
           autoFocus
+          maxLength={120}
+          onChange={e => setTitleLength(e.target.value.length)}
         />
-        <p className="text-xs text-muted-foreground">Phrase as a yes/no question</p>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Phrase as a yes/no question</span>
+          <span>{titleLength}/120</span>
+        </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description <span className="text-muted-foreground">(optional)</span></Label>
@@ -67,7 +73,7 @@ export function CreateBetForm({ groupId }: CreateBetFormProps) {
           required
         />
         <p className="text-xs text-muted-foreground">
-          Voting will open on this date. Bets must be placed before then.
+          Set this to the day after the event — betting closes on this date, then participants vote on the outcome.
         </p>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

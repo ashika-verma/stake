@@ -68,6 +68,62 @@ export async function placeBet(input: PlaceBetInput) {
   return { success: true }
 }
 
+export async function creatorResolveBet(betId: string, outcome: 'yes' | 'no') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: bet } = await supabase
+    .from('bets')
+    .select('created_by, group_id')
+    .eq('id', betId)
+    .single()
+
+  if (!bet) return { error: 'Bet not found' }
+  if (bet.created_by !== user.id) return { error: 'Only the bet creator can resolve this bet' }
+
+  const { error } = await supabase
+    .from('bets')
+    .update({
+      outcome,
+      status: 'resolved',
+      creator_resolved_at: new Date().toISOString(),
+      creator_resolved_outcome: outcome,
+    })
+    .eq('id', betId)
+    .eq('status', 'voting')
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/bets/${betId}`)
+  if (bet.group_id) revalidatePath(`/groups/${bet.group_id}`)
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function cancelBet(betId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: bet } = await supabase
+    .from('bets')
+    .select('group_id')
+    .eq('id', betId)
+    .single()
+
+  const { error } = await supabase.rpc('cancel_bet', { p_bet_id: betId })
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/bets/${betId}`)
+  if (bet?.group_id) revalidatePath(`/groups/${bet.group_id}`)
+  revalidatePath('/dashboard')
+  return {}
+}
+
 export async function triggerVotingPeriod(betId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
