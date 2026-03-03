@@ -14,12 +14,6 @@ export default async function JoinPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, venmo_username')
-    .eq('id', user.id)
-    .single()
-
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
@@ -31,11 +25,7 @@ export default async function JoinPage({ params }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <JoinGroupForm
-            code={code}
-            hasVenmo={!!profile?.venmo_username}
-            displayName={profile?.display_name ?? ''}
-          />
+          <JoinGroupForm code={code} />
         </CardContent>
       </Card>
     </main>
