@@ -11,8 +11,13 @@ import type { Prediction } from '@/types/database'
 interface PlaceBetFormProps {
   betId: string
   myParticipations: Array<{ prediction: Prediction; pledge_amount: number }>
+  allParticipations: Array<{ prediction: Prediction; pledge_amount: number }>
   venmoUsername: string | null
   displayName: string
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100
 }
 
 function PositionSummary({ participations }: { participations: Array<{ prediction: Prediction; pledge_amount: number }> }) {
@@ -37,8 +42,48 @@ function PositionSummary({ participations }: { participations: Array<{ predictio
   )
 }
 
-export function PlaceBetForm({ betId, myParticipations, venmoUsername, displayName }: PlaceBetFormProps) {
+function PayoutPreview({
+  prediction,
+  pledgeAmount,
+  allParticipations,
+}: {
+  prediction: Prediction | null
+  pledgeAmount: number
+  allParticipations: Array<{ prediction: Prediction; pledge_amount: number }>
+}) {
+  if (!prediction || pledgeAmount <= 0) return null
+
+  const currentYesPool = round2(allParticipations.filter(p => p.prediction === 'yes').reduce((s, p) => s + Number(p.pledge_amount), 0))
+  const currentNoPool  = round2(allParticipations.filter(p => p.prediction === 'no').reduce((s, p) => s + Number(p.pledge_amount), 0))
+
+  let estimatedWin: number
+  const opposingPool = prediction === 'yes' ? currentNoPool : currentYesPool
+  const samePool     = prediction === 'yes' ? currentYesPool : currentNoPool
+  const newSamePool  = round2(samePool + pledgeAmount)
+
+  if (opposingPool === 0) {
+    return (
+      <div className="rounded-lg bg-secondary/50 p-3 text-sm space-y-1">
+        <p className="text-muted-foreground">No one on the other side yet — you&apos;d win nothing extra if this resolves now.</p>
+        <p className="text-red-500">✗ If wrong: lose ${pledgeAmount.toFixed(2)}</p>
+      </div>
+    )
+  }
+
+  estimatedWin = round2((pledgeAmount / newSamePool) * opposingPool)
+  const totalReturn = round2(pledgeAmount + estimatedWin)
+
+  return (
+    <div className="rounded-lg bg-secondary/50 p-3 text-sm space-y-1">
+      <p className="text-green-600">✓ If right: win ~${estimatedWin.toFixed(2)} (get back ${totalReturn.toFixed(2)} total)</p>
+      <p className="text-red-500">✗ If wrong: lose ${pledgeAmount.toFixed(2)}</p>
+    </div>
+  )
+}
+
+export function PlaceBetForm({ betId, myParticipations, allParticipations, venmoUsername, displayName }: PlaceBetFormProps) {
   const [prediction, setPrediction] = useState<Prediction | null>(null)
+  const [pledgeAmount, setPledgeAmount] = useState<number>(0)
   const [error, setError]   = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [localParticipations, setLocalParticipations] = useState(myParticipations)
@@ -56,21 +101,20 @@ export function PlaceBetForm({ betId, myParticipations, venmoUsername, displayNa
     e.preventDefault()
     if (!prediction) return setError('Select yes or no')
 
-    const fd = new FormData(e.currentTarget)
-    const amount = parseFloat(fd.get('pledgeAmount') as string)
-    if (isNaN(amount) || amount < 0.01) return setError('Enter a valid amount')
+    if (isNaN(pledgeAmount) || pledgeAmount < 0.01) return setError('Enter a valid amount')
 
     setError(null)
     setLoading(true)
-    const result = await placeBet({ betId, prediction, pledgeAmount: amount })
+    const result = await placeBet({ betId, prediction, pledgeAmount })
     setLoading(false)
 
     if (result && 'error' in result) {
       setError(result.error ?? 'Something went wrong')
     } else {
       // Optimistically update local position
-      setLocalParticipations(prev => [...prev, { prediction, pledge_amount: amount }])
+      setLocalParticipations(prev => [...prev, { prediction, pledge_amount: pledgeAmount }])
       setPrediction(null)
+      setPledgeAmount(0)
       ;(e.target as HTMLFormElement).reset()
     }
   }
@@ -117,8 +161,16 @@ export function PlaceBetForm({ betId, myParticipations, venmoUsername, displayNa
             step="0.01"
             placeholder="5.00"
             required
+            value={pledgeAmount || ''}
+            onChange={e => setPledgeAmount(parseFloat(e.target.value) || 0)}
           />
         </div>
+
+        <PayoutPreview
+          prediction={prediction}
+          pledgeAmount={pledgeAmount}
+          allParticipations={allParticipations}
+        />
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
