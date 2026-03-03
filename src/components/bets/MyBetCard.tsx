@@ -27,6 +27,7 @@ export interface MyBetCardData {
     yes?: PositionSide
     no?: PositionSide
   }
+  netPnl?: number
 }
 
 function SideDetails({ side, outcome, position }: {
@@ -91,7 +92,18 @@ export function MyBetCard({ data }: { data: MyBetCardData }) {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-snug">{data.betTitle}</CardTitle>
-          <BetStatusBadge status={data.betStatus} />
+          <div className="flex items-center gap-2 shrink-0">
+            {data.betStatus === 'resolved' && data.netPnl !== undefined && (
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                data.netPnl >= 0
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'bg-red-500/20 text-red-400'
+              }`}>
+                {data.netPnl >= 0 ? '+' : ''}${data.netPnl.toFixed(2)}
+              </span>
+            )}
+            <BetStatusBadge status={data.betStatus} />
+          </div>
         </div>
         {data.groupName && (
           <p className="text-xs text-muted-foreground">{data.groupName}</p>
