@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export function Header({ displayName }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background will-change-transform">
+    <header className="border-b bg-background shrink-0">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/dashboard" className="font-bold text-lg tracking-tight">
           Stake

@@ -19,11 +19,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .single()
 
   return (
-    <div className="min-h-screen">
+    <div className="flex flex-col h-[100dvh]">
       <Header displayName={profile?.display_name} />
-      <div className="pb-16 md:pb-0">
+      <main className="flex-1 overflow-y-auto">
         {children}
-      </div>
+      </main>
       <MobileNav />
     </div>
   )
