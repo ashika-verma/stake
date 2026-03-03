@@ -1,12 +1,22 @@
+'use client'
+
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { VenmoButton } from './VenmoButton'
+import { markAsPaid, unmarkAsPaid } from '@/actions/settlements'
 import type { DebtTransaction } from '@/types/app'
 
 interface DebtListProps {
+  betId: string
   transactions: DebtTransaction[]
   currentUserId: string
+  paidKeys: Set<string>
 }
 
-export function DebtList({ transactions, currentUserId }: DebtListProps) {
+export function DebtList({ betId, transactions, currentUserId, paidKeys: initialPaidKeys }: DebtListProps) {
+  const [paidKeys, setPaidKeys] = useState<Set<string>>(initialPaidKeys)
+  const [loadingKey, setLoadingKey] = useState<string | null>(null)
+
   if (transactions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">
@@ -15,7 +25,6 @@ export function DebtList({ transactions, currentUserId }: DebtListProps) {
     )
   }
 
-  // Show transactions involving the current user first
   const myTransactions = transactions.filter(
     t => t.fromUserId === currentUserId || t.toUserId === currentUserId
   )
@@ -23,13 +32,40 @@ export function DebtList({ transactions, currentUserId }: DebtListProps) {
     t => t.fromUserId !== currentUserId && t.toUserId !== currentUserId
   )
 
+  async function handleMarkPaid(t: DebtTransaction) {
+    const key = `${t.fromUserId}:${t.toUserId}`
+    setLoadingKey(key)
+    const result = await markAsPaid(betId, t.toUserId, t.amount)
+    setLoadingKey(null)
+    if (!result.error) {
+      setPaidKeys(prev => new Set([...prev, key]))
+    }
+  }
+
+  async function handleUnmarkPaid(t: DebtTransaction) {
+    const key = `${t.fromUserId}:${t.toUserId}`
+    setLoadingKey(key)
+    const result = await unmarkAsPaid(betId, t.toUserId)
+    setLoadingKey(null)
+    if (!result.error) {
+      setPaidKeys(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+    }
+  }
+
   const renderTransaction = (t: DebtTransaction, isMe: boolean) => {
     const iOwe = t.fromUserId === currentUserId
     const theyOweMe = t.toUserId === currentUserId
+    const txKey = `${t.fromUserId}:${t.toUserId}`
+    const isPaid = paidKeys.has(txKey)
+    const isLoading = loadingKey === txKey
 
     return (
       <div
-        key={`${t.fromUserId}-${t.toUserId}`}
+        key={txKey}
         className={`rounded-lg border p-4 space-y-3 ${
           isMe ? 'border-primary/30 bg-primary/5' : 'border-border'
         }`}
@@ -49,12 +85,47 @@ export function DebtList({ transactions, currentUserId }: DebtListProps) {
           </div>
           <span className="font-bold text-lg">${t.amount.toFixed(2)}</span>
         </div>
-        {iOwe && t.toVenmoUsername && (
-          <VenmoButton
-            username={t.toVenmoUsername}
-            amount={t.amount}
-            note={`Stake bet: ${t.betTitle}`}
-          />
+
+        {iOwe && (
+          <div className="space-y-2">
+            {!isPaid && t.toVenmoUsername && (
+              <VenmoButton
+                username={t.toVenmoUsername}
+                amount={t.amount}
+                note={`Stake bet: ${t.betTitle}`}
+              />
+            )}
+            {isPaid ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-green-400">✓ Paid</span>
+                <button
+                  onClick={() => handleUnmarkPaid(t)}
+                  disabled={isLoading}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+                >
+                  {isLoading ? 'Undoing...' : 'Undo'}
+                </button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleMarkPaid(t)}
+                disabled={isLoading}
+                className="text-xs h-7 px-2"
+              >
+                {isLoading ? 'Marking...' : 'Mark as paid'}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {theyOweMe && (
+          <p className="text-xs text-muted-foreground">
+            {isPaid
+              ? <span className="text-green-400 font-medium">✓ Paid</span>
+              : 'Awaiting payment'}
+          </p>
         )}
       </div>
     )

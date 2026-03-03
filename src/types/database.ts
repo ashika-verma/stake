@@ -57,3 +57,12 @@ export interface ResolutionVote {
   vote: VoteValue
   created_at: string
 }
+
+export interface SettlementPayment {
+  id: string
+  bet_id: string
+  from_user_id: string
+  to_user_id: string
+  amount: number
+  marked_at: string
+}

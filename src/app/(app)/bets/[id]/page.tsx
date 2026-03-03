@@ -74,12 +74,9 @@ export default async function BetDetailPage({ params }: Props) {
   const yesVotes = votes.filter((v: { vote: string }) => v.vote === 'yes').length
   const noVotes  = votes.filter((v: { vote: string }) => v.vote === 'no').length
 
-  // Current user's participations (may be 0, 1, or 2 with hedging)
   const myParticipations = participations.filter(p => p.user_id === user.id)
-  const mySides = myParticipations.map(p => p.prediction as Prediction)
   const currentUserVote = votes.find((v: { user_id: string }) => v.user_id === user.id) ?? null
 
-  // Unique participants for quorum calculation
   const uniqueParticipants = new Set(participations.map(p => p.user_id)).size
 
   const isOpen      = bet.status === 'open'
@@ -105,6 +102,19 @@ export default async function BetDetailPage({ params }: Props) {
         })),
         bet.outcome
       )
+    }
+  }
+
+  // Fetch settlement payments for this bet (for mark-as-paid feature)
+  let paidKeys = new Set<string>()
+  if (settlement && settlement.transactions.length > 0) {
+    const { data: payments } = await supabase
+      .from('settlement_payments')
+      .select('from_user_id, to_user_id')
+      .eq('bet_id', id)
+
+    if (payments) {
+      paidKeys = new Set(payments.map(p => `${p.from_user_id}:${p.to_user_id}`))
     }
   }
 
@@ -151,7 +161,43 @@ export default async function BetDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Market state — always visible */}
+      {/* Trigger voting */}
+      {isOpen && isPastDue && (
+        <Card className="border-amber-500/30">
+          <CardContent className="pt-6">
+            <p className="text-sm text-amber-400 mb-3">
+              Resolution date has passed — open voting for participants.
+            </p>
+            <TriggerVotingButton betId={id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Place bet — moved above market state */}
+      {canStillBet && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Place a bet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PlaceBetForm
+              betId={id}
+              myParticipations={myParticipations.map(p => ({
+                prediction: p.prediction,
+                pledge_amount: p.pledge_amount,
+              }))}
+              allParticipations={participations.map(p => ({
+                prediction: p.prediction,
+                pledge_amount: p.pledge_amount,
+              }))}
+              venmoUsername={currentUserProfile?.venmo_username ?? null}
+              displayName={currentUserProfile?.display_name ?? ''}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Market state */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Market</CardTitle>
@@ -165,38 +211,6 @@ export default async function BetDetailPage({ params }: Props) {
           }))} />
         </CardContent>
       </Card>
-
-      {/* Trigger voting */}
-      {isOpen && isPastDue && (
-        <Card className="border-amber-500/30">
-          <CardContent className="pt-6">
-            <p className="text-sm text-amber-400 mb-3">
-              Resolution date has passed — open voting for participants.
-            </p>
-            <TriggerVotingButton betId={id} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Place bet */}
-      {canStillBet && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Place a bet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PlaceBetForm
-              betId={id}
-              myParticipations={myParticipations.map(p => ({
-                prediction: p.prediction,
-                pledge_amount: p.pledge_amount,
-              }))}
-              venmoUsername={currentUserProfile?.venmo_username ?? null}
-              displayName={currentUserProfile?.display_name ?? ''}
-            />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Participants */}
       {participations.length > 0 && (
@@ -249,7 +263,12 @@ export default async function BetDetailPage({ params }: Props) {
           <SettlementCard settlement={settlement} currentUserId={user.id} />
           <div>
             <h3 className="font-semibold mb-3">Who pays whom</h3>
-            <DebtList transactions={settlement.transactions} currentUserId={user.id} />
+            <DebtList
+              betId={id}
+              transactions={settlement.transactions}
+              currentUserId={user.id}
+              paidKeys={paidKeys}
+            />
           </div>
         </>
       )}
